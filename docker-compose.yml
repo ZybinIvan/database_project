@@ -1,0 +1,95 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database Service
+  postgres:
+    image: postgres:15-alpine
+    container_name: logistics_postgres
+    
+    environment:
+      POSTGRES_USER: logistics
+      POSTGRES_PASSWORD: logistics_password
+      POSTGRES_DB: logistics_db
+    
+    ports:
+      - "5433:5432"
+    
+    volumes:
+      # Сохранение данных БД между перезагрузками
+      - postgres_data:/var/lib/postgresql/data
+      # Автоматическое выполнение SQL скрипта при инициализации
+      - ./database_schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+    
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U logistics -d logistics_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    
+    networks:
+      - logistics_network
+
+  # FastAPI Application Service
+  api:
+    build: .
+    container_name: logistics_api
+    
+    environment:
+      DATABASE_URL: postgresql://logistics:logistics_password@postgres:5432/logistics_db
+      PYTHONUNBUFFERED: 1
+    
+    ports:
+      - "8000:8000"
+    
+    depends_on:
+      postgres:
+        condition: service_healthy
+    
+    volumes:
+      - .:/app
+      - /app/__pycache__
+    
+    # Запустить миграции и заполнить БД, затем запустить приложение
+#    command: sh -c "
+#      echo 'Ожидание готовности PostgreSQL...' &&
+#      sleep 5 &&
+#      echo 'Заполнение БД данными...' &&
+#      python populate_database.py &&
+#      echo 'Запуск API сервера...' &&
+#      python -m uvicorn fastapi_backend:app --host 0.0.0.0 --port 8000 --reload
+    
+    networks:
+      - logistics_network
+    
+    restart: unless-stopped
+
+  # Web Server для статических файлов (опционально)
+  web_server:
+    image: nginx:alpine
+    container_name: logistics_web
+    
+    ports:
+      - "8001:80"
+    
+    volumes:
+      - ./interface_web.html:/usr/share/nginx/html/index.html:ro
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    
+    depends_on:
+      - api
+    
+    networks:
+      - logistics_network
+    
+    restart: unless-stopped
+
+# Определение volumes
+volumes:
+  postgres_data:
+    driver: local
+
+# Определение сети
+networks:
+  logistics_network:
+    driver: bridge
