@@ -473,12 +473,12 @@
         <div class="container">
             <ul>
                 <li><button class="nav-btn active" data-tab="dashboard">Дашборд</button></li>
-                <li><button class="nav-btn" data-tab="orders">Заказы</button></li>
-                <li><button class="nav-btn" data-tab="shipments">Доставки</button></li>
+                <li><button class="nav-btn" data-tab="order_item">Заказы</button></li>
+                <li><button class="nav-btn" data-tab="shipment">Доставки</button></li>
                 <li><button class="nav-btn" data-tab="routes">Маршруты</button></li>
-                <li><button class="nav-btn" data-tab="customers">Клиенты</button></li>
-                <li><button class="nav-btn" data-tab="drivers">Водители</button></li>
-                <li><button class="nav-btn" data-tab="vehicles">ТС</button></li>
+                <li><button class="nav-btn" data-tab="customer">Клиенты</button></li>
+                <li><button class="nav-btn" data-tab="driver">Водители</button></li>
+                <li><button class="nav-btn" data-tab="vehicle">ТС</button></li>
                 <li><button class="nav-btn" data-tab="analytics">Аналитика</button></li>
             </ul>
         </div>
@@ -538,7 +538,7 @@
             </div>
 
             <!-- ORDERS -->
-            <div id="orders" class="tab-content">
+            <div id="order_item" class="tab-content">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                     <h2>Заказы</h2>
                     <button class="btn btn-primary" onclick="openOrderModal()">Новый заказ</button>
@@ -580,7 +580,7 @@
             </div>
 
             <!-- SHIPMENTS -->
-            <div id="shipments" class="tab-content">
+            <div id="shipment" class="tab-content">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                     <h2>Партии доставки</h2>
                     <button class="btn btn-primary" onclick="openShipmentModal()">Новая партия</button>
@@ -645,7 +645,7 @@
             </div>
 
             <!-- CUSTOMERS -->
-            <div id="customers" class="tab-content">
+            <div id="customer" class="tab-content">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                     <h2>Клиенты</h2>
                     <button class="btn btn-primary" onclick="openCustomerModal()">Новый клиент</button>
@@ -677,7 +677,7 @@
             </div>
 
             <!-- DRIVERS -->
-            <div id="drivers" class="tab-content">
+            <div id="driver" class="tab-content">
                 <h2 style="margin-bottom: 20px;">Водители</h2>
                 <div class="card">
                     <div class="card-body">
@@ -705,7 +705,7 @@
             </div>
 
             <!-- VEHICLES -->
-            <div id="vehicles" class="tab-content">
+            <div id="vehicle" class="tab-content">
                 <h2 style="margin-bottom: 20px;">Транспортные средства</h2>
                 <div class="card">
                     <div class="card-body">
@@ -991,12 +991,12 @@
                 document.getElementById(tabId).classList.add('active');
 
                 if (tabId === 'dashboard') loadDashboard();
-                else if (tabId === 'orders') loadOrders();
-                else if (tabId === 'shipments') loadShipments();
+                else if (tabId === 'order_item') loadOrders();
+                else if (tabId === 'shipment') loadShipments();
                 else if (tabId === 'routes') loadRoutes();
-                else if (tabId === 'customers') loadCustomers();
-                else if (tabId === 'drivers') loadDrivers();
-                else if (tabId === 'vehicles') loadVehicles();
+                else if (tabId === 'customer') loadCustomers();
+                else if (tabId === 'driver') loadDrivers();
+                else if (tabId === 'vehicle') loadVehicles();
                 else if (tabId === 'analytics') loadAnalytics();
             });
         });
@@ -1098,7 +1098,7 @@
                         <td>${order.order_number}</td>
                         <td>${order.customer_id}</td>
                         <td><span class="badge badge-${order.status === 'Delivered' ? 'success' : 'pending'}">${order.status}</span></td>
-                        <td>${order.priority}</td>
+                        
                         <td>${order.delivery_date}</td>
                         <td>${order.cost}</td>
                         <td><button class="btn btn-small btn-secondary">Редактировать</button></td>
@@ -1123,7 +1123,7 @@
                         <td>${shipment.driver_id}</td>
                         <td><span class="badge badge-${shipment.status === 'Delivered' ? 'success' : 'info'}">${shipment.status}</span></td>
                         <td>${shipment.departure_time || '-'}</td>
-                        <td>${shipment.actual_arrival_time || '-'}</td>
+                        <td>${shipment.arrival_time || '-'}</td>
                         <td><button class="btn btn-small btn-secondary" onclick="updateShipmentStatus(${shipment.shipment_id})">Обновить статус</button></td>
                     </tr>`
                 ).join('');
@@ -1146,7 +1146,7 @@
                         <td>${route.start_location}</td>
                         <td>${route.end_location}</td>
                         <td>${route.distance_km}</td>
-                        <td>${route.estimated_duration_hours}</td>
+                        
                         <td><span class="badge badge-${route.is_active ? 'success' : 'danger'}">${route.is_active ? 'Активен' : 'Неактивен'}</span></td>
                         <td><button class="btn btn-small btn-secondary">Редактировать</button></td>
                     </tr>`
@@ -1191,7 +1191,7 @@
                         <td>${driver.driver_id}</td>
                         <td>${driver.license_number}</td>
                         <td>${driver.experience_years}</td>
-                        <td>${driver.rating}</td>
+                        
                         <td><span class="badge badge-${driver.is_available ? 'success' : 'danger'}">${driver.is_available ? 'Да' : 'Нет'}</span></td>
                         <td><button class="btn btn-small btn-secondary">Редактировать</button></td>
                     </tr>`
@@ -1214,7 +1214,7 @@
                         <td>${vehicle.vehicle_type}</td>
                         <td>${vehicle.brand} ${vehicle.model}</td>
                         <td>${vehicle.capacity_kg}</td>
-                        <td>${vehicle.mileage}</td>
+                        
                         <td><span class="badge badge-${vehicle.is_available ? 'success' : 'danger'}">${vehicle.is_available ? 'Да' : 'Нет'}</span></td>
                         <td><button class="btn btn-small btn-secondary">Редактировать</button></td>
                     </tr>`
@@ -1242,7 +1242,7 @@
                     `<tr>
                         <td>${driver.name}</td>
                         <td>${driver.deliveries}</td>
-                        <td>${driver.rating}</td>
+                        
                     </tr>`
                 ).join('');
             } catch (error) {

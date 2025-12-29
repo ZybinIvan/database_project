@@ -1,9 +1,10 @@
 -- ===================================================================
 -- Упрощенная система управления логистикой и доставкой
--- SQL схема базы данных (PostgreSQL) - без таблицы shipment
+-- SQL схема базы данных (PostgreSQL)
 -- ===================================================================
 
 DROP TABLE IF EXISTS delivery CASCADE;
+DROP TABLE IF EXISTS shipment CASCADE;
 DROP TABLE IF EXISTS order_item CASCADE;
 DROP TABLE IF EXISTS route CASCADE;
 DROP TABLE IF EXISTS warehouse CASCADE;
@@ -23,7 +24,6 @@ CREATE TABLE employee (
     hire_date DATE NOT NULL,
     is_active BOOLEAN DEFAULT TRUE
 );
-
 
 -- ===================================================================
 -- 2. ТАБЛИЦА: Клиент
@@ -105,22 +105,19 @@ CREATE TABLE order_item (
 );
 
 -- ===================================================================
--- 8. ТАБЛИЦА: Доставка
+-- 8. ТАБЛИЦА: Партия доставки
 -- ===================================================================
-CREATE TABLE delivery (
-    delivery_id SERIAL PRIMARY KEY,
-    delivery_number VARCHAR(50) UNIQUE NOT NULL,
+CREATE TABLE shipment (
+    shipment_id SERIAL PRIMARY KEY,
+    shipment_number VARCHAR(50) UNIQUE NOT NULL,
     order_id INT NOT NULL,
     vehicle_id INT NOT NULL,
     driver_id INT NOT NULL,
     route_id INT NOT NULL,
-    recipient_name VARCHAR(255) NOT NULL,
-    recipient_phone VARCHAR(20) NOT NULL,
-    recipient_address VARCHAR(255) NOT NULL,
     departure_time TIMESTAMP,
-    delivery_time TIMESTAMP,
+    arrival_time TIMESTAMP,
     status VARCHAR(50) NOT NULL DEFAULT 'Pending',
-    delivery_cost DECIMAL(10, 2) NOT NULL,
+    cost DECIMAL(10, 2) NOT NULL,
     FOREIGN KEY (order_id) REFERENCES order_item(order_id),
     FOREIGN KEY (vehicle_id) REFERENCES vehicle(vehicle_id),
     FOREIGN KEY (driver_id) REFERENCES driver(driver_id),
@@ -128,15 +125,27 @@ CREATE TABLE delivery (
 );
 
 -- ===================================================================
+-- 9. ТАБЛИЦА: Доставка
+-- ===================================================================
+CREATE TABLE delivery (
+    delivery_id SERIAL PRIMARY KEY,
+    shipment_id INT NOT NULL,
+    recipient_name VARCHAR(255) NOT NULL,
+    recipient_phone VARCHAR(20) NOT NULL,
+    recipient_address VARCHAR(255) NOT NULL,
+    delivery_time TIMESTAMP,
+    status VARCHAR(50) NOT NULL DEFAULT 'Pending',
+    FOREIGN KEY (shipment_id) REFERENCES shipment(shipment_id)
+);
+
+-- ===================================================================
 -- ИНДЕКСЫ для оптимизации запросов
 -- ===================================================================
 CREATE INDEX idx_order_customer ON order_item(customer_id);
 CREATE INDEX idx_order_status ON order_item(status);
-CREATE INDEX idx_order_warehouse ON order_item(warehouse_id);
-CREATE INDEX idx_delivery_order ON delivery(order_id);
-CREATE INDEX idx_delivery_vehicle ON delivery(vehicle_id);
-CREATE INDEX idx_delivery_driver ON delivery(driver_id);
-CREATE INDEX idx_delivery_status ON delivery(status);
-CREATE INDEX idx_driver_employee ON driver(employee_id);
+CREATE INDEX idx_shipment_vehicle ON shipment(vehicle_id);
+CREATE INDEX idx_shipment_driver ON shipment(driver_id);
+CREATE INDEX idx_shipment_status ON shipment(status);
+CREATE INDEX idx_delivery_shipment ON delivery(shipment_id);
 
 COMMIT;

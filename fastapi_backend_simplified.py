@@ -1,6 +1,11 @@
+"""
+Упрощенная система управления логистикой и доставкой
+FastAPI бэкенд для взаимодействия с БД
+"""
+
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import create_engine, Column, Integer, String, Float, Boolean, Date, DateTime, DECIMAL, ForeignKey, func
+from sqlalchemy import create_engine, Column, Integer, String, Float, Boolean, Date, DateTime, DECIMAL, ForeignKey
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
 from pydantic import BaseModel
@@ -13,7 +18,7 @@ DATABASE_URL = "postgresql://logistics:logistics_password@postgres:5432/logistic
 app = FastAPI(
     title="Logistics Management System API",
     description="Упрощенное API для управления логистикой",
-    version="3.0.0"
+    version="2.0.0"
 )
 
 app.add_middleware(
@@ -97,21 +102,28 @@ class OrderModel(Base):
     status = Column(String(50), default="Pending")
     cost = Column(DECIMAL(10, 2), nullable=False)
 
-class DeliveryModel(Base):
-    __tablename__ = "delivery"
-    delivery_id = Column(Integer, primary_key=True, index=True)
-    delivery_number = Column(String(50), unique=True, nullable=False)
+class ShipmentModel(Base):
+    __tablename__ = "shipment"
+    shipment_id = Column(Integer, primary_key=True, index=True)
+    shipment_number = Column(String(50), unique=True, nullable=False)
     order_id = Column(Integer, ForeignKey("order_item.order_id"), nullable=False)
     vehicle_id = Column(Integer, ForeignKey("vehicle.vehicle_id"), nullable=False)
     driver_id = Column(Integer, ForeignKey("driver.driver_id"), nullable=False)
     route_id = Column(Integer, ForeignKey("route.route_id"), nullable=False)
+    departure_time = Column(DateTime)
+    arrival_time = Column(DateTime)
+    status = Column(String(50), default="Pending")
+    cost = Column(DECIMAL(10, 2), nullable=False)
+
+class DeliveryModel(Base):
+    __tablename__ = "delivery"
+    delivery_id = Column(Integer, primary_key=True, index=True)
+    shipment_id = Column(Integer, ForeignKey("shipment.shipment_id"), nullable=False)
     recipient_name = Column(String(255), nullable=False)
     recipient_phone = Column(String(20), nullable=False)
     recipient_address = Column(String(255), nullable=False)
-    departure_time = Column(DateTime)
     delivery_time = Column(DateTime)
     status = Column(String(50), default="Pending")
-    delivery_cost = Column(DECIMAL(10, 2), nullable=False)
 
 class EmployeeSchema(BaseModel):
     full_name: str
@@ -165,17 +177,21 @@ class OrderSchema(BaseModel):
     status: str = "Pending"
     cost: float
 
-class DeliverySchema(BaseModel):
-    delivery_number: str
+class ShipmentSchema(BaseModel):
+    shipment_number: str
     order_id: int
     vehicle_id: int
     driver_id: int
     route_id: int
+    status: str = "Pending"
+    cost: float
+
+class DeliverySchema(BaseModel):
+    shipment_id: int
     recipient_name: str
     recipient_phone: str
     recipient_address: str
     status: str = "Pending"
-    delivery_cost: float
 
 def get_db():
     db = SessionLocal()
@@ -366,12 +382,41 @@ def update_order_status(order_id: int, status: str, db: Session = Depends(get_db
     logger.info(f"Order {order_id} status updated to {status}")
     return {"message": "Order status updated"}
 
+@app.get("/api/shipments", tags=["Shipments"])
+def get_shipments(status: Optional[str] = None, db: Session = Depends(get_db)):
+    query = db.query(ShipmentModel)
+    if status:
+        query = query.filter(ShipmentModel.status == status)
+    return {"total": query.count(), "data": query.all()}
+
+@app.post("/api/shipments", tags=["Shipments"])
+def create_shipment(shipment: ShipmentSchema, db: Session = Depends(get_db)):
+    new_shipment = ShipmentModel(**shipment.dict())
+    db.add(new_shipment)
+    db.commit()
+    db.refresh(new_shipment)
+    logger.info(f"Created shipment: {new_shipment.shipment_number}")
+    return {"id": new_shipment.shipment_id, "message": "Shipment created"}
+
+@app.put("/api/shipments/{shipment_id}/status", tags=["Shipments"])
+def update_shipment_status(shipment_id: int, status: str, db: Session = Depends(get_db)):
+    shipment = db.query(ShipmentModel).filter(ShipmentModel.shipment_id == shipment_id).first()
+    if not shipment:
+        raise HTTPException(status_code=404, detail="Shipment not found")
+    shipment.status = status
+    if status == "In Transit":
+        shipment.departure_time = datetime.utcnow()
+    elif status == "Delivered":
+        shipment.arrival_time = datetime.utcnow()
+    db.commit()
+    return {"message": "Shipment status updated"}
+
 @app.get("/api/deliveries", tags=["Deliveries"])
-def get_deliveries(status: Optional[str] = None, skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+def get_deliveries(status: Optional[str] = None, db: Session = Depends(get_db)):
     query = db.query(DeliveryModel)
     if status:
         query = query.filter(DeliveryModel.status == status)
-    return {"total": query.count(), "data": query.offset(skip).limit(limit).all()}
+    return {"total": query.count(), "data": query.all()}
 
 @app.post("/api/deliveries", tags=["Deliveries"])
 def create_delivery(delivery: DeliverySchema, db: Session = Depends(get_db)):
@@ -379,32 +424,23 @@ def create_delivery(delivery: DeliverySchema, db: Session = Depends(get_db)):
     db.add(new_delivery)
     db.commit()
     db.refresh(new_delivery)
-    logger.info(f"Created delivery: {new_delivery.delivery_number}")
     return {"id": new_delivery.delivery_id, "message": "Delivery created"}
 
-@app.get("/api/deliveries/{delivery_id}", tags=["Deliveries"])
-def get_delivery(delivery_id: int, db: Session = Depends(get_db)):
+@app.put("/api/deliveries/{delivery_id}/complete", tags=["Deliveries"])
+def complete_delivery(delivery_id: int, db: Session = Depends(get_db)):
     delivery = db.query(DeliveryModel).filter(DeliveryModel.delivery_id == delivery_id).first()
     if not delivery:
         raise HTTPException(status_code=404, detail="Delivery not found")
-    return delivery
-
-@app.put("/api/deliveries/{delivery_id}/status", tags=["Deliveries"])
-def update_delivery_status(delivery_id: int, status: str, db: Session = Depends(get_db)):
-    delivery = db.query(DeliveryModel).filter(DeliveryModel.delivery_id == delivery_id).first()
-    if not delivery:
-        raise HTTPException(status_code=404, detail="Delivery not found")
-    delivery.status = status
-    if status == "In Transit":
-        delivery.departure_time = datetime.utcnow()
-    elif status == "Delivered":
-        delivery.delivery_time = datetime.utcnow()
+    delivery.status = "Delivered"
+    delivery.delivery_time = datetime.utcnow()
     db.commit()
-    logger.info(f"Delivery {delivery_id} status updated to {status}")
-    return {"message": "Delivery status updated"}
+    logger.info(f"Delivery {delivery_id} completed")
+    return {"message": "Delivery completed"}
 
 @app.get("/api/analytics/dashboard", tags=["Analytics"])
 def get_dashboard(db: Session = Depends(get_db)):
+    from sqlalchemy import func
+
     total_orders = db.query(func.count(OrderModel.order_id)).scalar() or 0
     delivered_orders = db.query(func.count(OrderModel.order_id)).filter(
         OrderModel.status == 'Delivered'
@@ -415,11 +451,12 @@ def get_dashboard(db: Session = Depends(get_db)):
     available_drivers = db.query(func.count(DriverModel.driver_id)).filter(
         DriverModel.is_available == True
     ).scalar() or 0
+
     total_revenue = db.query(func.sum(OrderModel.cost)).scalar() or 0
-    total_deliveries = db.query(func.count(DeliveryModel.delivery_id)).filter(
-        DeliveryModel.status == 'Delivered'
+    total_shipments = db.query(func.count(ShipmentModel.shipment_id)).filter(
+        ShipmentModel.status == 'Delivered'
     ).scalar() or 0
-    avg_delivery_cost = db.query(func.avg(DeliveryModel.delivery_cost)).scalar() or 0
+    avg_shipment_cost = db.query(func.avg(ShipmentModel.cost)).scalar() or 0
 
     return {
         "total_orders": total_orders,
@@ -427,33 +464,8 @@ def get_dashboard(db: Session = Depends(get_db)):
         "in_transit_orders": in_transit_orders,
         "available_drivers": available_drivers,
         "total_revenue": float(total_revenue),
-        "total_deliveries": total_deliveries,
-        "avg_delivery_cost": float(avg_delivery_cost)
-    }
-
-@app.get("/api/analytics/driver-performance", tags=["Analytics"])
-def driver_performance(db: Session = Depends(get_db)):
-    result = db.query(
-        DriverModel.driver_id,
-        EmployeeModel.full_name,
-        func.count(DeliveryModel.delivery_id).label("deliveries")
-    ).join(
-        EmployeeModel, DriverModel.employee_id == EmployeeModel.employee_id
-    ).outerjoin(
-        DeliveryModel, DriverModel.driver_id == DeliveryModel.driver_id
-    ).group_by(
-        DriverModel.driver_id, EmployeeModel.full_name
-    ).all()
-
-    return {
-        "data": [
-            {
-                "driver_id": r[0],
-                "name": r[1],
-                "deliveries": r[2] or 0
-            }
-            for r in result
-        ]
+        "total_shipments": total_shipments,
+        "avg_shipment_cost": float(avg_shipment_cost)
     }
 
 @app.get("/api/health", tags=["System"])
@@ -462,44 +474,7 @@ def health_check():
         "status": "healthy",
         "timestamp": datetime.utcnow().isoformat()
     }
-@app.get("/api/employees", tags=["Employees"])
-def get_employees(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    count_query = "SELECT COUNT(*) FROM employee"
-    total = db.execute(count_query).scalar()
-
-    data_query = """
-        SELECT 
-            employee_id,
-            full_name,
-            position,
-            phone,
-            hire_date,
-            is_active
-        FROM employee
-        ORDER BY employee_id
-        OFFSET :skip
-        LIMIT :limit
-    """
-
-    result = db.execute(data_query, {"skip": skip, "limit": limit})
-
-    # Сериализация полученных данных в список словарей
-    employees = [
-        {
-            "employee_id": row[0],
-            "full_name": row[1],
-            "position": row[2],
-            "phone": row[3],
-            "hire_date": row[4].isoformat(),
-            "is_active": row[5],
-        }
-        for row in result
-    ]
-
-    return {"total": total, "data": employees}
 
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
-
-

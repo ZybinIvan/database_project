@@ -1,0 +1,1434 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Система управления логистикой</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1e40af;
+            --success: #16a34a;
+            --danger: #dc2626;
+            --warning: #f59e0b;
+            --bg: #f3f4f6;
+            --white: #ffffff;
+            --text: #1f2937;
+            --gray: #6b7280;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+        }
+        
+        header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        header h1 {
+            font-size: 28px;
+            margin-bottom: 5px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .nav-tabs {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e5e7eb;
+            flex-wrap: wrap;
+        }
+        
+        .nav-tab {
+            padding: 12px 20px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: var(--gray);
+            font-size: 14px;
+            font-weight: 500;
+            border-bottom: 3px solid transparent;
+            margin-bottom: -2px;
+            transition: all 0.3s;
+        }
+        
+        .nav-tab:hover {
+            color: var(--text);
+        }
+        
+        .nav-tab.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+        
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.3s;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        .card {
+            background: var(--white);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .stat {
+            background: var(--white);
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .stat-value {
+            font-size: 32px;
+            font-weight: bold;
+            color: var(--primary);
+        }
+        
+        .stat-label {
+            color: var(--gray);
+            margin-top: 5px;
+            font-size: 14px;
+        }
+        
+        .btn {
+            padding: 10px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s;
+            font-size: 14px;
+        }
+        
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: var(--primary-dark);
+        }
+        
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background: #15803d;
+        }
+        
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background: #b91c1c;
+        }
+        
+        .btn-small {
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        
+        th {
+            background: #f9fafb;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            border-bottom: 2px solid #e5e7eb;
+        }
+        
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        tr:hover {
+            background: #f9fafb;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .badge-success {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        
+        .badge-warning {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        
+        .badge-danger {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        
+        .badge-info {
+            background: #dbeafe;
+            color: #0c4a6e;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal.active {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: var(--white);
+            border-radius: 8px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+            padding: 30px;
+            animation: slideIn 0.3s;
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        
+        .modal-header {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--gray);
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            font-size: 14px;
+        }
+        
+        input, select, textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 14px;
+            font-family: inherit;
+        }
+        
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+        
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+        
+        .form-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            justify-content: flex-end;
+        }
+        
+        .alert {
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            animation: slideIn 0.3s;
+        }
+        
+        .alert-success {
+            background: #d1fae5;
+            color: #065f46;
+            border: 1px solid #6ee7b7;
+        }
+        
+        .alert-danger {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fca5a5;
+        }
+        
+        .alert-info {
+            background: #dbeafe;
+            color: #0c4a6e;
+            border: 1px solid #93c5fd;
+        }
+        
+        .filters {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .filters select {
+            max-width: 200px;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 5px;
+        }
+        
+        @media (max-width: 768px) {
+            .stats {
+                grid-template-columns: 1fr;
+            }
+            .nav-tabs {
+                overflow-x: auto;
+            }
+            table {
+                font-size: 12px;
+            }
+            th, td {
+                padding: 8px;
+            }
+            .modal-content {
+                width: 95%;
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>🚚 Система управления логистикой</h1>
+        <p>Управление доставками и логистикой в реальном времени</p>
+    </header>
+    
+    <div class="container">
+        <div id="alertContainer"></div>
+        
+        <!-- НАВИГАЦИЯ -->
+        <div class="nav-tabs">
+            <button class="nav-tab active" onclick="switchTab('dashboard')">📊 Панель</button>
+            <button class="nav-tab" onclick="switchTab('orders')">📋 Заказы</button>
+            <button class="nav-tab" onclick="switchTab('shipments')">🚚 Доставки</button>
+            <button class="nav-tab" onclick="switchTab('customers')">👥 Клиенты</button>
+            <button class="nav-tab" onclick="switchTab('drivers')">👨‍✈️ Водители</button>
+            <button class="nav-tab" onclick="switchTab('vehicles')">🚗 Транспорт</button>
+            <button class="nav-tab" onclick="switchTab('analytics')">📈 Аналитика</button>
+        </div>
+        
+        <!-- ПАНЕЛЬ -->
+        <div id="dashboard" class="tab-content active">
+            <div class="stats">
+                <div class="stat">
+                    <div class="stat-value" id="stat-orders">0</div>
+                    <div class="stat-label">Всего заказов</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="stat-delivered">0</div>
+                    <div class="stat-label">Доставлено</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="stat-in-transit">0</div>
+                    <div class="stat-label">В пути</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="stat-drivers">0</div>
+                    <div class="stat-label">Активных водителей</div>
+                </div>
+            </div>
+            <div class="card">
+                <h3>📋 Последние заказы</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Клиент</th>
+                            <th>Статус</th>
+                            <th>Срок доставки</th>
+                            <th>Сумма</th>
+                        </tr>
+                    </thead>
+                    <tbody id="dashboard-orders">
+                        <tr><td colspan="5" style="text-align: center;">Загрузка...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- ЗАКАЗЫ -->
+        <div id="orders" class="tab-content">
+            <div class="card">
+                <h3>📋 Управление заказами</h3>
+                <button class="btn btn-primary" onclick="openOrderModal()">+ Добавить заказ</button>
+                
+                <div class="filters">
+                    <select id="order-status-filter" onchange="loadOrders()">
+                        <option value="">Все статусы</option>
+                        <option value="Ожидает">Ожидает</option>
+                        <option value="В обработке">В обработке</option>
+                        <option value="Доставлено">Доставлено</option>
+                    </select>
+                </div>
+                
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Клиент</th>
+                            <th>Статус</th>
+                            <th>Приоритет</th>
+                            <th>Срок</th>
+                            <th>Сумма</th>
+                            <th>Действия</th>
+                        </tr>
+                    </thead>
+                    <tbody id="orders-table">
+                        <tr><td colspan="7" style="text-align: center;">Загрузка...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- ДОСТАВКИ -->
+        <div id="shipments" class="tab-content">
+            <div class="card">
+                <h3>🚚 Доставки</h3>
+                <button class="btn btn-primary" onclick="openShipmentModal()">+ Добавить доставку</button>
+                
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Заказ</th>
+                            <th>Водитель</th>
+                            <th>ТС</th>
+                            <th>Статус</th>
+                            <th>Стоимость</th>
+                            <th>Действия</th>
+                        </tr>
+                    </thead>
+                    <tbody id="shipments-table">
+                        <tr><td colspan="7" style="text-align: center;">Загрузка...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- КЛИЕНТЫ -->
+        <div id="customers" class="tab-content">
+            <div class="card">
+                <h3>👥 Клиенты</h3>
+                <button class="btn btn-primary" onclick="openCustomerModal()">+ Добавить клиента</button>
+                
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Компания</th>
+                            <th>Контакт</th>
+                            <th>Город</th>
+                            <th>Телефон</th>
+                            <th>Статус</th>
+                        </tr>
+                    </thead>
+                    <tbody id="customers-table">
+                        <tr><td colspan="5" style="text-align: center;">Загрузка...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- ВОДИТЕЛИ -->
+        <div id="drivers" class="tab-content">
+            <div class="card">
+                <h3>👨‍✈️ Водители</h3>
+                <button class="btn btn-primary" onclick="openDriverModal()">+ Добавить водителя</button>
+                
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ФИО</th>
+                            <th>Лицензия</th>
+                            <th>Опыт (лет)</th>
+                            <th>Рейтинг</th>
+                            <th>Статус</th>
+                            <th>Действия</th>
+                        </tr>
+                    </thead>
+                    <tbody id="drivers-table">
+                        <tr><td colspan="6" style="text-align: center;">Загрузка...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- ТРАНСПОРТ -->
+        <div id="vehicles" class="tab-content">
+            <div class="card">
+                <h3>🚗 Транспортные средства</h3>
+                <button class="btn btn-primary" onclick="openVehicleModal()">+ Добавить ТС</button>
+                
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Номер</th>
+                            <th>Тип</th>
+                            <th>Марка/Модель</th>
+                            <th>Грузоподъемность (кг)</th>
+                            <th>Объем (м³)</th>
+                            <th>Пробег</th>
+                            <th>Статус</th>
+                        </tr>
+                    </thead>
+                    <tbody id="vehicles-table">
+                        <tr><td colspan="7" style="text-align: center;">Загрузка...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- АНАЛИТИКА -->
+        <div id="analytics" class="tab-content">
+            <div class="stats">
+                <div class="stat">
+                    <div class="stat-value"><span id="total-revenue">0</span>₽</div>
+                    <div class="stat-label">Общая выручка</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="total-shipments">0</div>
+                    <div class="stat-label">Доставлено отправок</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value"><span id="avg-cost">0</span>₽</div>
+                    <div class="stat-label">Средняя стоимость</div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h3>⭐ Рейтинг водителей</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Водитель</th>
+                            <th>Доставок</th>
+                            <th>Рейтинг</th>
+                        </tr>
+                    </thead>
+                    <tbody id="driver-performance-table">
+                        <tr><td colspan="3" style="text-align: center;">Загрузка...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <!-- МОДАЛЬНЫЕ ОКНА -->
+    
+    <!-- ЗАКАЗ -->
+    <div id="orderModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span id="orderModalTitle">Новый заказ</span>
+                <button class="close-btn" onclick="closeOrderModal()">✕</button>
+            </div>
+            <form id="orderForm">
+                <div class="form-group">
+                    <label>ID</label>
+                    <input type="text" id="order-id" readonly style="background: #f3f4f6;">
+                </div>
+                <div class="form-group">
+                    <label>Клиент *</label>
+                    <select id="order-customer" required></select>
+                </div>
+                <div class="form-group">
+                    <label>Склад *</label>
+                    <select id="order-warehouse" required></select>
+                </div>
+                <div class="form-group">
+                    <label>Дата заказа *</label>
+                    <input type="date" id="order-date" required>
+                </div>
+                <div class="form-group">
+                    <label>Дата доставки *</label>
+                    <input type="date" id="order-delivery-date" required>
+                </div>
+                <div class="form-group">
+                    <label>Приоритет</label>
+                    <select id="order-priority">
+                        <option value="Низкая">Низкая</option>
+                        <option value="Обычная">Обычная</option>
+                        <option value="Высокая">Высокая</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Стоимость *</label>
+                    <input type="number" id="order-cost" step="0.01" required>
+                </div>
+                <div class="form-group">
+                    <label>Описание</label>
+                    <textarea id="order-description"></textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-danger" onclick="closeOrderModal()">Отмена</button>
+                    <button type="submit" class="btn btn-success">Сохранить</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- ДОСТАВКА -->
+    <div id="shipmentModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span>Новая доставка</span>
+                <button class="close-btn" onclick="closeShipmentModal()">✕</button>
+            </div>
+            <form id="shipmentForm">
+                <div class="form-group">
+                    <label>Заказ *</label>
+                    <select id="shipment-order" required></select>
+                </div>
+                <div class="form-group">
+                    <label>Водитель *</label>
+                    <select id="shipment-driver" required></select>
+                </div>
+                <div class="form-group">
+                    <label>Транспорт *</label>
+                    <select id="shipment-vehicle" required></select>
+                </div>
+                <div class="form-group">
+                    <label>Маршрут *</label>
+                    <select id="shipment-route" required></select>
+                </div>
+                <div class="form-group">
+                    <label>Стоимость *</label>
+                    <input type="number" id="shipment-cost" step="0.01" required>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-danger" onclick="closeShipmentModal()">Отмена</button>
+                    <button type="submit" class="btn btn-success">Сохранить</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- КЛИЕНТ -->
+    <div id="customerModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span>Новый клиент</span>
+                <button class="close-btn" onclick="closeCustomerModal()">✕</button>
+            </div>
+            <form id="customerForm">
+                <div class="form-group">
+                    <label>Компания *</label>
+                    <input type="text" id="customer-company" required>
+                </div>
+                <div class="form-group">
+                    <label>Контактное лицо *</label>
+                    <input type="text" id="customer-contact" required>
+                </div>
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="customer-email">
+                </div>
+                <div class="form-group">
+                    <label>Телефон *</label>
+                    <input type="tel" id="customer-phone" required>
+                </div>
+                <div class="form-group">
+                    <label>Город *</label>
+                    <input type="text" id="customer-city" required>
+                </div>
+                <div class="form-group">
+                    <label>Адрес *</label>
+                    <input type="text" id="customer-address" required>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-danger" onclick="closeCustomerModal()">Отмена</button>
+                    <button type="submit" class="btn btn-success">Сохранить</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- ВОДИТЕЛЬ -->
+    <div id="driverModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span>Новый водитель</span>
+                <button class="close-btn" onclick="closeDriverModal()">✕</button>
+            </div>
+            <form id="driverForm">
+                <div class="form-group">
+                    <label>Сотрудник *</label>
+                    <select id="driver-employee" required></select>
+                </div>
+                <div class="form-group">
+                    <label>Номер лицензии *</label>
+                    <input type="text" id="driver-license" required>
+                </div>
+                <div class="form-group">
+                    <label>Срок действия лицензии *</label>
+                    <input type="date" id="driver-license-exp" required>
+                </div>
+                <div class="form-group">
+                    <label>Опыт вождения (лет) *</label>
+                    <input type="number" id="driver-experience" min="0" required>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-danger" onclick="closeDriverModal()">Отмена</button>
+                    <button type="submit" class="btn btn-success">Сохранить</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- ТРАНСПОРТ -->
+    <div id="vehicleModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span>Новое ТС</span>
+                <button class="close-btn" onclick="closeVehicleModal()">✕</button>
+            </div>
+            <form id="vehicleForm">
+                <div class="form-group">
+                    <label>Номер ТС *</label>
+                    <input type="text" id="vehicle-plate" required>
+                </div>
+                <div class="form-group">
+                    <label>Тип ТС *</label>
+                    <select id="vehicle-type" required>
+                        <option value="Легковой">Легковой</option>
+                        <option value="Фургон">Фургон</option>
+                        <option value="Грузовик">Грузовик</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Марка *</label>
+                    <input type="text" id="vehicle-brand" required>
+                </div>
+                <div class="form-group">
+                    <label>Модель *</label>
+                    <input type="text" id="vehicle-model" required>
+                </div>
+                <div class="form-group">
+                    <label>Год выпуска *</label>
+                    <input type="number" id="vehicle-year" min="1900" required>
+                </div>
+                <div class="form-group">
+                    <label>Грузоподъемность (кг) *</label>
+                    <input type="number" id="vehicle-capacity-kg" step="0.01" required>
+                </div>
+                <div class="form-group">
+                    <label>Объем (м³) *</label>
+                    <input type="number" id="vehicle-capacity-m3" step="0.01" required>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-danger" onclick="closeVehicleModal()">Отмена</button>
+                    <button type="submit" class="btn btn-success">Сохранить</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <script>
+        const API_URL = 'http://localhost:8000/api';
+        let currentEditOrderId = null;
+        
+        function formatDate(dateStr) {
+            if (!dateStr) return '-';
+            const date = new Date(dateStr);
+            const d = String(date.getDate()).padStart(2, '0');
+            const m = String(date.getMonth() + 1).padStart(2, '0');
+            const y = date.getFullYear();
+            return `${d}.${m}.${y}`;
+        }
+        
+        function getStatusBadge(status) {
+            const badges = {
+                'Доставлено': 'badge-success',
+                'В пути': 'badge-warning',
+                'Ожидает': 'badge-info',
+                'В обработке': 'badge-info',
+            };
+            return `<span class="badge ${badges[status] || 'badge-info'}">${status}</span>`;
+        }
+        
+        function showAlert(message, type = 'success') {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type}`;
+            alertDiv.textContent = message;
+            document.getElementById('alertContainer').appendChild(alertDiv);
+            setTimeout(() => alertDiv.remove(), 3000);
+        }
+        
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.nav-tab').forEach(el => el.classList.remove('active'));
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+            
+            if (tabName === 'dashboard') loadDashboard();
+            else if (tabName === 'orders') loadOrders();
+            else if (tabName === 'shipments') loadShipments();
+            else if (tabName === 'customers') loadCustomers();
+            else if (tabName === 'drivers') loadDrivers();
+            else if (tabName === 'vehicles') loadVehicles();
+            else if (tabName === 'analytics') loadAnalytics();
+        }
+        
+        async function loadCustomerDropdown(selectId) {
+            try {
+                const res = await fetch(`${API_URL}/customers`);
+                const data = await res.json();
+                const select = document.getElementById(selectId);
+                select.innerHTML = '<option value=""></option>';
+                data.data.forEach(customer => {
+                    const option = document.createElement('option');
+                    option.value = customer.customer_id;
+                    option.textContent = `${customer.company_name} (${customer.contact_person})`;
+                    select.appendChild(option);
+                });
+            } catch (e) {
+                console.error('Ошибка загрузки клиентов:', e);
+            }
+        }
+        
+        async function loadWarehouseDropdown(selectId) {
+            try {
+                const res = await fetch(`${API_URL}/warehouses`);
+                const data = await res.json();
+                const select = document.getElementById(selectId);
+                select.innerHTML = '<option value=""></option>';
+                data.data.forEach(warehouse => {
+                    const option = document.createElement('option');
+                    option.value = warehouse.warehouse_id;
+                    option.textContent = `${warehouse.warehouse_name} (${warehouse.city})`;
+                    select.appendChild(option);
+                });
+            } catch (e) {
+                console.error('Ошибка загрузки складов:', e);
+            }
+        }
+        
+        async function loadOrderDropdown(selectId) {
+            try {
+                const res = await fetch(`${API_URL}/orders`);
+                const data = await res.json();
+                const select = document.getElementById(selectId);
+                select.innerHTML = '<option value=""></option>';
+                data.data.forEach(order => {
+                    const option = document.createElement('option');
+                    option.value = order.id;
+                    option.textContent = `${order.id} - ${order.customer_name}`;
+                    select.appendChild(option);
+                });
+            } catch (e) {
+                console.error('Ошибка загрузки заказов:', e);
+            }
+        }
+        
+        async function loadDriverDropdown(selectId) {
+            try {
+                const res = await fetch(`${API_URL}/drivers`);
+                const data = await res.json();
+                const select = document.getElementById(selectId);
+                select.innerHTML = '<option value=""></option>';
+                data.data.forEach(driver => {
+                    const option = document.createElement('option');
+                    option.value = driver.driver_id;
+                    option.textContent = `${driver.full_name} (${driver.license_number})`;
+                    select.appendChild(option);
+                });
+            } catch (e) {
+                console.error('Ошибка загрузки водителей:', e);
+            }
+        }
+        
+        async function loadVehicleDropdown(selectId) {
+            try {
+                const res = await fetch(`${API_URL}/vehicles`);
+                const data = await res.json();
+                const select = document.getElementById(selectId);
+                select.innerHTML = '<option value=""></option>';
+                data.data.forEach(vehicle => {
+                    const option = document.createElement('option');
+                    option.value = vehicle.vehicle_id;
+                    option.textContent = `${vehicle.brand} ${vehicle.model} (${vehicle.license_plate})`;
+                    select.appendChild(option);
+                });
+            } catch (e) {
+                console.error('Ошибка загрузки ТС:', e);
+            }
+        }
+        
+        async function loadRouteDropdown(selectId) {
+            try {
+                const res = await fetch(`${API_URL}/routes`);
+                const data = await res.json();
+                const select = document.getElementById(selectId);
+                select.innerHTML = '<option value=""></option>';
+                data.data.forEach(route => {
+                    const option = document.createElement('option');
+                    option.value = route.route_id;
+                    option.textContent = `${route.route_name} (${route.distance_km} км)`;
+                    select.appendChild(option);
+                });
+            } catch (e) {
+                console.error('Ошибка загрузки маршрутов:', e);
+            }
+        }
+        
+        async function loadEmployeeDropdown(selectId) {
+            try {
+                const res = await fetch(`${API_URL}/employees`);
+                const data = await res.json();
+                const select = document.getElementById(selectId);
+                select.innerHTML = '<option value=""></option>';
+                data.data.forEach(employee => {
+                    const option = document.createElement('option');
+                    option.value = employee.employee_id;
+                    option.textContent = `${employee.full_name} (${employee.position})`;
+                    select.appendChild(option);
+                });
+            } catch (e) {
+                console.error('Ошибка загрузки сотрудников:', e);
+            }
+        }
+        
+        async function loadDashboard() {
+            try {
+                const ordersRes = await fetch(`${API_URL}/orders?limit=100`);
+                const ordersData = await ordersRes.json();
+                const driversRes = await fetch(`${API_URL}/drivers?available_only=true`);
+                const driversData = await driversRes.json();
+                
+                document.getElementById('stat-orders').textContent = ordersData.total;
+                document.getElementById('stat-drivers').textContent = driversData.total;
+                
+                const delivered = ordersData.data.filter(o => o.status === 'Доставлено').length;
+                const inTransit = ordersData.data.filter(o => o.status === 'В пути').length;
+                
+                document.getElementById('stat-delivered').textContent = delivered;
+                document.getElementById('stat-in-transit').textContent = inTransit;
+                
+                const tbody = document.querySelector('#dashboard-orders tbody');
+                tbody.innerHTML = ordersData.data.slice(0, 5).map(order => `
+                    <tr>
+                        <td>${order.id}</td>
+                        <td>${order.customer_name}</td>
+                        <td>${getStatusBadge(order.status)}</td>
+                        <td>${formatDate(order.delivery_date)}</td>
+                        <td>${Number(order.cost).toLocaleString('ru-RU')}</td>
+                    </tr>
+                `).join('');
+            } catch (error) {
+                console.error('Ошибка:', error);
+                showAlert('Ошибка загрузки панели', 'danger');
+            }
+        }
+        
+        async function loadOrders() {
+            try {
+                const status = document.getElementById('order-status-filter')?.value;
+                let url = `${API_URL}/orders`;
+                if (status) url += `?status=${encodeURIComponent(status)}`;
+                
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                const tbody = document.querySelector('#orders-table tbody');
+                tbody.innerHTML = data.data.map(order => `
+                    <tr>
+                        <td>${order.id}</td>
+                        <td>${order.customer_name}</td>
+                        <td>${getStatusBadge(order.status)}</td>
+                        <td>${order.priority}</td>
+                        <td>${formatDate(order.delivery_date)}</td>
+                        <td>${Number(order.cost).toLocaleString('ru-RU')}</td>
+                        <td class="action-buttons">
+                            <button class="btn btn-small btn-primary" onclick="editOrder(${order.id})">Изменить</button>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (error) {
+                console.error('Ошибка:', error);
+                showAlert('Ошибка загрузки заказов', 'danger');
+            }
+        }
+        
+        function openOrderModal() {
+            currentEditOrderId = null;
+            document.getElementById('orderModalTitle').textContent = 'Новый заказ';
+            document.getElementById('orderForm').reset();
+            document.getElementById('order-id').value = '';
+            document.getElementById('order-date').valueAsDate = new Date();
+            loadCustomerDropdown('order-customer');
+            loadWarehouseDropdown('order-warehouse');
+            document.getElementById('orderModal').classList.add('active');
+        }
+        
+        function closeOrderModal() {
+            document.getElementById('orderModal').classList.remove('active');
+        }
+        
+        async function editOrder(orderId) {
+            try {
+                const res = await fetch(`${API_URL}/orders/${orderId}`);
+                const order = await res.json();
+                currentEditOrderId = orderId;
+                document.getElementById('orderModalTitle').textContent = `Заказ ${orderId}`;
+                document.getElementById('order-id').value = order.id;
+                document.getElementById('order-date').value = order.order_date;
+                document.getElementById('order-delivery-date').value = order.delivery_date;
+                document.getElementById('order-priority').value = order.priority;
+                document.getElementById('order-cost').value = order.cost;
+                document.getElementById('order-description').value = order.description || '';
+                
+                loadCustomerDropdown('order-customer');
+                loadWarehouseDropdown('order-warehouse');
+                setTimeout(() => {
+                    document.getElementById('order-customer').value = order.customer_id;
+                    document.getElementById('order-warehouse').value = order.warehouse_id;
+                }, 100);
+                
+                document.getElementById('orderModal').classList.add('active');
+            } catch (error) {
+                console.error('Ошибка:', error);
+                showAlert('Ошибка загрузки заказа', 'danger');
+            }
+        }
+        
+        document.getElementById('orderForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            try {
+                const formData = {
+                    customer_id: parseInt(document.getElementById('order-customer').value),
+                    warehouse_id: parseInt(document.getElementById('order-warehouse').value),
+                    order_date: document.getElementById('order-date').value,
+                    delivery_date: document.getElementById('order-delivery-date').value,
+                    priority: document.getElementById('order-priority').value,
+                    cost: parseFloat(document.getElementById('order-cost').value),
+                    description: document.getElementById('order-description').value,
+                };
+                
+                let response;
+                if (currentEditOrderId) {
+                    response = await fetch(`${API_URL}/orders/${currentEditOrderId}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            customer_id: formData.customer_id,
+                            warehouse_id: formData.warehouse_id,
+                            priority: formData.priority,
+                            cost: formData.cost,
+                            delivery_date: formData.delivery_date,
+                        })
+                    });
+                } else {
+                    response = await fetch(`${API_URL}/orders`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(formData)
+                    });
+                }
+                
+                if (response.ok) {
+                    showAlert(currentEditOrderId ? 'Заказ обновлен' : 'Заказ создан', 'success');
+                    closeOrderModal();
+                    loadOrders();
+                } else {
+                    showAlert('Ошибка сохранения', 'danger');
+                }
+            } catch (error) {
+                console.error('Ошибка:', error);
+                showAlert('Ошибка сохранения', 'danger');
+            }
+        });
+        
+        async function loadShipments() {
+            try {
+                const response = await fetch(`${API_URL}/shipments`);
+                const data = await response.json();
+                
+                const tbody = document.querySelector('#shipments-table tbody');
+                tbody.innerHTML = data.data.map(shipment => `
+                    <tr>
+                        <td>${shipment.id}</td>
+                        <td>${shipment.order_id}</td>
+                        <td>${shipment.driver_name || 'N/A'}</td>
+                        <td>${shipment.brand} ${shipment.model}</td>
+                        <td>${getStatusBadge(shipment.status)}</td>
+                        <td>${Number(shipment.cost).toLocaleString('ru-RU')}</td>
+                        <td class="action-buttons">
+                            <button class="btn btn-small btn-primary" onclick="changeShipmentStatus(${shipment.id})">Изменить статус</button>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (error) {
+                console.error('Ошибка:', error);
+                showAlert('Ошибка загрузки доставок', 'danger');
+            }
+        }
+        
+        function openShipmentModal() {
+            document.getElementById('shipmentForm').reset();
+            loadOrderDropdown('shipment-order');
+            loadDriverDropdown('shipment-driver');
+            loadVehicleDropdown('shipment-vehicle');
+            loadRouteDropdown('shipment-route');
+            document.getElementById('shipmentModal').classList.add('active');
+        }
+        
+        function closeShipmentModal() {
+            document.getElementById('shipmentModal').classList.remove('active');
+        }
+        
+        async function changeShipmentStatus(shipmentId) {
+            const newStatus = prompt('Введите новый статус (Ожидает, В пути, Доставлено):', '');
+            if (!newStatus) return;
+            
+            try {
+                const response = await fetch(`${API_URL}/shipments/${shipmentId}/status`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: newStatus })
+                });
+                
+                if (response.ok) {
+                    showAlert('Статус обновлен', 'success');
+                    loadShipments();
+                } else {
+                    showAlert('Ошибка обновления', 'danger');
+                }
+            } catch (error) {
+                console.error('Ошибка:', error);
+                showAlert('Ошибка обновления', 'danger');
+            }
+        }
+        
+        document.getElementById('shipmentForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            try {
+                const formData = {
+                    order_id: parseInt(document.getElementById('shipment-order').value),
+                    vehicle_id: parseInt(document.getElementById('shipment-vehicle').value),
+                    driver_id: parseInt(document.getElementById('shipment-driver').value),
+                    route_id: parseInt(document.getElementById('shipment-route').value),
+                    status: 'Ожидает',
+                    cost: parseFloat(document.getElementById('shipment-cost').value)
+                };
+                
+                const response = await fetch(`${API_URL}/shipments`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formData)
+                });
+                
+                if (response.ok) {
+                    showAlert('Доставка создана', 'success');
+                    closeShipmentModal();
+                    loadShipments();
+                } else {
+                    showAlert('Ошибка создания', 'danger');
+                }
+            } catch (error) {
+                console.error('Ошибка:', error);
+                showAlert('Ошибка создания', 'danger');
+            }
+        });
+        
+        async function loadCustomers() {
+            try {
+                const response = await fetch(`${API_URL}/customers`);
+                const data = await response.json();
+                
+                const tbody = document.querySelector('#customers-table tbody');
+                tbody.innerHTML = data.data.map(customer => `
+                    <tr>
+                        <td>${customer.company_name}</td>
+                        <td>${customer.contact_person}</td>
+                        <td>${customer.city}</td>
+                        <td>${customer.phone}</td>
+                        <td><span class="badge badge-success">Активен</span></td>
+                    </tr>
+                `).join('');
+            } catch (error) {
+                console.error('Ошибка:', error);
+                showAlert('Ошибка загрузки клиентов', 'danger');
+            }
+        }
+        
+        function openCustomerModal() {
+            document.getElementById('customerForm').reset();
+            document.getElementById('customerModal').classList.add('active');
+        }
+        
+        function closeCustomerModal() {
+            document.getElementById('customerModal').classList.remove('active');
+        }
+        
+        document.getElementById('customerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            try {
+                const formData = {
+                    company_name: document.getElementById('customer-company').value,
+                    contact_person: document.getElementById('customer-contact').value,
+                    email: document.getElementById('customer-email').value,
+                    phone: document.getElementById('customer-phone').value,
+                    city: document.getElementById('customer-city').value,
+                    address: document.getElementById('customer-address').value,
+                };
+                
+                const response = await fetch(`${API_URL}/customers`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formData)
+                });
+                
+                if (response.ok) {
+                    showAlert('Клиент создан', 'success');
+                    closeCustomerModal();
+                    loadCustomers();
+                } else {
+                    showAlert('Ошибка создания', 'danger');
+                }
+            } catch (error) {
+                console.error('Ошибка:', error);
+                showAlert('Ошибка создания', 'danger');
+            }
+        });
+        
+        async function loadDrivers() {
+            try {
+                const response = await fetch(`${API_URL}/drivers`);
+                const data = await response.json();
+                
+                const tbody = document.querySelector('#drivers-table tbody');
+                tbody.innerHTML = data.data.map(driver => `
+                    <tr>
+                        <td>${driver.full_name}</td>
+                        <td>${driver.license_number}</td>
+                        <td>${driver.experience_years}</td>
+                        <td>${driver.rating}</td>
+                        <td><span class="badge badge-success">Свободен</span></td>
+                        <td></td>
+                    </tr>
+                `).join('');
+            } catch (error) {
+                console.error('Ошибка:', error);
+                showAlert('Ошибка загрузки водителей', 'danger');
+            }
+        }
+        
+        function openDriverModal() {
+            document.getElementById('driverForm').reset();
+            loadEmployeeDropdown('driver-employee');
+            document.getElementById('driverModal').classList.add('active');
+        }
+        
+        function closeDriverModal() {
+            document.getElementById('driverModal').classList.remove('active');
+        }
+        
+        document.getElementById('driverForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            try {
+                const formData = {
+                    employee_id: parseInt(document.getElementById('driver-employee').value),
+                    license_number: document.getElementById('driver-license').value,
+                    license_expiry_date: document.getElementById('driver-license-exp').value,
+                    experience_years: parseInt(document.getElementById('driver-experience').value)
+                };
+                
+                const response = await fetch(`${API_URL}/drivers`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formData)
+                });
+                
+                if (response.ok) {
+                    showAlert('Водитель создан', 'success');
+                    closeDriverModal();
+                    loadDrivers();
+                } else {
+                    showAlert('Ошибка создания', 'danger');
+                }
+            } catch (error) {
+                console.error('Ошибка:', error);
+                showAlert('Ошибка создания', 'danger');
+            }
+        });
+        
+        async function loadVehicles() {
+            try {
+                const response = await fetch(`${API_URL}/vehicles`);
+                const data = await response.json();
+                
+                const tbody = document.querySelector('#vehicles-table tbody');
+                tbody.innerHTML = data.data.map(vehicle => `
+                    <tr>
+                        <td>${vehicle.license_plate}</td>
+                        <td>${vehicle.vehicle_type}</td>
+                        <td>${vehicle.brand} ${vehicle.model}</td>
+                        <td>${vehicle.capacity_kg}</td>
+                        <td>${vehicle.capacity_cubic_m}</td>
+                        <td>${vehicle.mileage || 0}</td>
+                        <td><span class="badge badge-success">Свободен</span></td>
+                    </tr>
+                `).join('');
+            } catch (error) {
+                console.error('Ошибка:', error);
+                showAlert('Ошибка загрузки ТС', 'danger');
+            }
+        }
+        
+        function openVehicleModal() {
+            document.getElementById('vehicleForm').reset();
+            document.getElementById('vehicleModal').classList.add('active');
+        }
+        
+        function closeVehicleModal() {
+            document.getElementById('vehicleModal').classList.remove('active');
+        }
+        
+        document.getElementById('vehicleForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            try {
+                const formData = {
+                    license_plate: document.getElementById('vehicle-plate').value,
+                    vehicle_type: document.getElementById('vehicle-type').value,
+                    brand: document.getElementById('vehicle-brand').value,
+                    model: document.getElementById('vehicle-model').value,
+                    year: parseInt(document.getElementById('vehicle-year').value),
+                    capacity_kg: parseFloat(document.getElementById('vehicle-capacity-kg').value),
+                    capacity_cubic_m: parseFloat(document.getElementById('vehicle-capacity-m3').value),
+                };
+                
+                const response = await fetch(`${API_URL}/vehicles`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formData)
+                });
+                
+                if (response.ok) {
+                    showAlert('ТС создано', 'success');
+                    closeVehicleModal();
+                    loadVehicles();
+                } else {
+                    showAlert('Ошибка создания', 'danger');
+                }
+            } catch (error) {
+                console.error('Ошибка:', error);
+                showAlert('Ошибка создания', 'danger');
+            }
+        });
+        
+        async function loadAnalytics() {
+            try {
+                const revenueRes = await fetch(`${API_URL}/analytics/revenue`);
+                const revenueData = await revenueRes.json();
+                
+                document.getElementById('total-revenue').textContent = Number(revenueData.total_revenue).toLocaleString('ru-RU', { maximumFractionDigits: 0 });
+                document.getElementById('total-shipments').textContent = revenueData.total_orders;
+                document.getElementById('avg-cost').textContent = Number(revenueData.avg_order_cost).toLocaleString('ru-RU', { maximumFractionDigits: 0 });
+                
+                const performanceRes = await fetch(`${API_URL}/analytics/driver-performance`);
+                const performanceData = await performanceRes.json();
+                
+                const tbody = document.querySelector('#driver-performance-table tbody');
+                tbody.innerHTML = performanceData.data.map(driver => `
+                    <tr>
+                        <td>${driver.full_name}</td>
+                        <td>${driver.deliveries}</td>
+                        <td>${driver.rating}</td>
+                    </tr>
+                `).join('');
+            } catch (error) {
+                console.error('Ошибка:', error);
+                showAlert('Ошибка загрузки аналитики', 'danger');
+            }
+        }
+        
+        document.addEventListener('DOMContentLoaded', loadDashboard);
+    </script>
+</body>
+</html>

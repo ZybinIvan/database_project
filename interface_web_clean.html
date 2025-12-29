@@ -479,7 +479,7 @@
                 <li><button class="nav-btn" data-tab="customers">Клиенты</button></li>
                 <li><button class="nav-btn" data-tab="drivers">Водители</button></li>
                 <li><button class="nav-btn" data-tab="vehicles">ТС</button></li>
-                <li><button class="nav-btn" data-tab="analytics">Аналитика</button></li>
+                
             </ul>
         </div>
     </nav>
@@ -734,47 +734,7 @@
             </div>
 
             <!-- ANALYTICS -->
-            <div id="analytics" class="tab-content">
-                <h2 style="margin-bottom: 20px;">Аналитика</h2>
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <h3>Общий доход</h3>
-                        <div class="value" id="total-revenue">0</div>
-                    </div>
-                    <div class="stat-card" style="border-left-color: var(--secondary-color);">
-                        <h3>Партий доставлено</h3>
-                        <div class="value" id="total-shipments">0</div>
-                    </div>
-                    <div class="stat-card" style="border-left-color: var(--warning-color);">
-                        <h3>Средняя стоимость партии</h3>
-                        <div class="value" id="avg-cost">0</div>
-                    </div>
-                </div>
-
-                <div class="card">
-                    <div class="card-header">
-                        <h2>Производительность водителей</h2>
-                    </div>
-                    <div class="card-body">
-                        <div class="table-responsive">
-                            <table id="driver-performance-table">
-                                <thead>
-                                    <tr>
-                                        <th>Водитель</th>
-                                        <th>Доставок</th>
-                                        <th>Рейтинг</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-                                        <td colspan="3" class="text-center">Загрузка...</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            
         </div>
     </main>
 
@@ -1222,32 +1182,6 @@
             } catch (error) {
                 console.error('Error loading vehicles:', error);
                 showAlert('Ошибка загрузки ТС', 'danger');
-            }
-        }
-
-        async function loadAnalytics() {
-            try {
-                const revenueRes = await fetch(`${API_URL}/analytics/revenue`);
-                const revenueData = await revenueRes.json();
-
-                document.getElementById('total-revenue').textContent = Math.round(revenueData.total_revenue);
-                document.getElementById('total-shipments').textContent = revenueData.total_shipments;
-                document.getElementById('avg-cost').textContent = Math.round(revenueData.average_shipment_cost);
-
-                const performanceRes = await fetch(`${API_URL}/analytics/driver-performance`);
-                const performanceData = await performanceRes.json();
-
-                const tbody = document.querySelector('#driver-performance-table tbody');
-                tbody.innerHTML = performanceData.data.map(driver =>
-                    `<tr>
-                        <td>${driver.name}</td>
-                        <td>${driver.deliveries}</td>
-                        <td>${driver.rating}</td>
-                    </tr>`
-                ).join('');
-            } catch (error) {
-                console.error('Error loading analytics:', error);
-                showAlert('Ошибка загрузки аналитики', 'danger');
             }
         }
 

@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Система управления логистикой</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f5f5; color: #333; }
+        .header { background-color: #2c3e50; color: white; padding: 20px; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .header h1 { font-size: 28px; margin-bottom: 5px; }
+        .header p { font-size: 14px; opacity: 0.9; }
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+        .nav-tabs { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; border-bottom: 2px solid #ddd; }
+        .nav-tabs button { padding: 12px 20px; border: none; background: none; cursor: pointer; font-size: 14px; font-weight: 500; color: #666; border-bottom: 3px solid transparent; transition: all 0.3s ease; }
+        .nav-tabs button:hover { color: #2c3e50; }
+        .nav-tabs button.active { color: #3498db; border-bottom-color: #3498db; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .dashboard-card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); text-align: center; }
+        .dashboard-card h3 { font-size: 12px; color: #999; text-transform: uppercase; margin-bottom: 10px; letter-spacing: 1px; }
+        .dashboard-card .number { font-size: 32px; font-weight: bold; color: #3498db; }
+        table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        thead { background-color: #34495e; color: white; }
+        th { padding: 15px; text-align: left; font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; }
+        td { padding: 12px 15px; border-bottom: 1px solid #ecf0f1; }
+        tbody tr:hover { background-color: #f8f9fa; }
+        .status-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+        .status-pending { background-color: #fff3cd; color: #856404; }
+        .status-processing { background-color: #cce5ff; color: #004085; }
+        .status-in-transit { background-color: #d1ecf1; color: #0c5460; }
+        .status-delivered { background-color: #d4edda; color: #155724; }
+        .status-failed { background-color: #f8d7da; color: #721c24; }
+        .btn { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 500; transition: all 0.3s ease; margin-right: 5px; }
+        .btn-primary { background-color: #3498db; color: white; }
+        .btn-primary:hover { background-color: #2980b9; }
+        .btn-secondary { background-color: #95a5a6; color: white; }
+        .btn-secondary:hover { background-color: #7f8c8d; }
+        .btn-success { background-color: #27ae60; color: white; }
+        .btn-success:hover { background-color: #229954; }
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); }
+        .modal.show { display: flex; align-items: center; justify-content: center; }
+        .modal-content { background-color: white; padding: 30px; border-radius: 8px; max-width: 500px; width: 90%; box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
+        .modal-header { font-size: 20px; font-weight: 600; margin-bottom: 20px; border-bottom: 2px solid #ecf0f1; padding-bottom: 15px; }
+        .modal-body { margin-bottom: 20px; }
+        .modal-footer { text-align: right; padding-top: 15px; border-top: 1px solid #ecf0f1; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: 500; font-size: 13px; }
+        input, select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; font-family: inherit; }
+        input:focus, select:focus { outline: none; border-color: #3498db; box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.1); }
+        .alert { padding: 15px; margin-bottom: 20px; border-radius: 4px; border-left: 4px solid; }
+        .alert-success { background-color: #d4edda; color: #155724; border-color: #c3e6cb; }
+        .alert-error { background-color: #f8d7da; color: #721c24; border-color: #f5c6cb; }
+        .loading { text-align: center; padding: 20px; color: #3498db; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Система управления логистикой</h1>
+    </div>
+
+    <div class="container">
+        <div class="nav-tabs">
+            <button class="tab-btn active" onclick="switchTab('dashboard')">Дашборд</button>
+            <button class="tab-btn" onclick="switchTab('orders')">Заказы</button>
+            <button class="tab-btn" onclick="switchTab('deliveries')">Доставки</button>
+            <button class="tab-btn" onclick="switchTab('routes')">Маршруты</button>
+            <button class="tab-btn" onclick="switchTab('customers')">Клиенты</button>
+            <button class="tab-btn" onclick="switchTab('drivers')">Водители</button>
+            <button class="tab-btn" onclick="switchTab('vehicles')">Транспорт</button>
+            <button class="tab-btn" onclick="switchTab('analytics')">Аналитика</button>
+        </div>
+
+        <div id="message-container"></div>
+
+        <div id="dashboard" class="tab-content active">
+            <h2 style="margin-bottom: 20px;">Дашборд</h2>
+            <div class="dashboard-grid">
+                <div class="dashboard-card">
+                    <h3>Всего заказов</h3>
+                    <div class="number" id="total-orders">0</div>
+                </div>
+                <div class="dashboard-card">
+                    <h3>Выполнено</h3>
+                    <div class="number" id="delivered-orders">0</div>
+                </div>
+                <div class="dashboard-card">
+                    <h3>В пути</h3>
+                    <div class="number" id="in-transit-orders">0</div>
+                </div>
+                <div class="dashboard-card">
+                    <h3>Доступных водителей</h3>
+                    <div class="number" id="available-drivers">0</div>
+                </div>
+                <div class="dashboard-card">
+                    <h3>Общий доход</h3>
+                    <div class="number" id="total-revenue">0₽</div>
+                </div>
+                <div class="dashboard-card">
+                    <h3>Доставок выполнено</h3>
+                    <div class="number" id="total-deliveries">0</div>
+                </div>
+            </div>
+            <h3 style="margin: 30px 0 20px 0;">Недавние заказы</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Номер</th>
+                        <th>Клиент</th>
+                        <th>Статус</th>
+                        <th>Дата доставки</th>
+                        <th>Стоимость</th>
+                    </tr>
+                </thead>
+                <tbody id="recent-orders">
+                    <tr><td colspan="5" class="loading">Загрузка...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div id="orders" class="tab-content">
+            <h2 style="margin-bottom: 20px;">Заказы</h2>
+            <div style="margin-bottom: 20px;">
+                <button class="btn btn-primary" onclick="openOrderModal()">+ Новый заказ</button>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Номер</th>
+                        <th>Клиент</th>
+                        <th>Статус</th>
+                        <th>Дата доставки</th>
+                        <th>Стоимость</th>
+                        <th>Действия</th>
+                    </tr>
+                </thead>
+                <tbody id="orders-table">
+                    <tr><td colspan="6" class="loading">Загрузка...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div id="deliveries" class="tab-content">
+            <h2 style="margin-bottom: 20px;">Доставки</h2>
+            <div style="margin-bottom: 20px;">
+                <button class="btn btn-primary" onclick="openDeliveryModal()">+ Новая доставка</button>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Номер доставки</th>
+                        <th>Заказ</th>
+                        <th>Водитель</th>
+                        <th>Статус</th>
+                        <th>Отправка</th>
+                        <th>Прибытие</th>
+                        <th>Действия</th>
+                    </tr>
+                </thead>
+                <tbody id="deliveries-table">
+                    <tr><td colspan="7" class="loading">Загрузка...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div id="routes" class="tab-content">
+            <h2 style="margin-bottom: 20px;">Маршруты</h2>
+            <div style="margin-bottom: 20px;">
+                <button class="btn btn-primary" onclick="openRouteModal()">+ Новый маршрут</button>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Название</th>
+                        <th>Откуда</th>
+                        <th>Куда</th>
+                        <th>Расстояние, км</th>
+                        <th>Статус</th>
+                        <th>Действия</th>
+                    </tr>
+                </thead>
+                <tbody id="routes-table">
+                    <tr><td colspan="7" class="loading">Загрузка...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div id="customers" class="tab-content">
+            <h2 style="margin-bottom: 20px;">Клиенты</h2>
+            <div style="margin-bottom: 20px;">
+                <button class="btn btn-primary" onclick="openCustomerModal()">+ Новый клиент</button>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Компания</th>
+                        <th>Контакт</th>
+                        <th>Город</th>
+                        <th>Телефон</th>
+                        <th>Статус</th>
+                        <th>Действия</th>
+                    </tr>
+                </thead>
+                <tbody id="customers-table">
+                    <tr><td colspan="6" class="loading">Загрузка...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div id="drivers" class="tab-content">
+            <h2 style="margin-bottom: 20px;">Водители</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Имя</th>
+                        <th>ВУ</th>
+                        <th>Стаж</th>
+                        <th>Доступен</th>
+                        <th>Действия</th>
+                    </tr>
+                </thead>
+                <tbody id="drivers-table">
+                    <tr><td colspan="6" class="loading">Загрузка...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div id="vehicles" class="tab-content">
+            <h2 style="margin-bottom: 20px;">Транспортные средства</h2>
+            <div style="margin-bottom: 20px;">
+                <button class="btn btn-primary" onclick="openVehicleModal()">+ Новое ТС</button>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Номер</th>
+                        <th>Тип</th>
+                        <th>Марка/Модель</th>
+                        <th>Грузоподъемность</th>
+                        <th>Доступно</th>
+                        <th>Действия</th>
+                    </tr>
+                </thead>
+                <tbody id="vehicles-table">
+                    <tr><td colspan="6" class="loading">Загрузка...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div id="analytics" class="tab-content">
+            <h2 style="margin-bottom: 20px;">Аналитика</h2>
+            <div class="dashboard-grid">
+                <div class="dashboard-card">
+                    <h3>Общий доход</h3>
+                    <div class="number" id="analytics-revenue">0₽</div>
+                </div>
+                <div class="dashboard-card">
+                    <h3>Доставок выполнено</h3>
+                    <div class="number" id="analytics-deliveries">0</div>
+                </div>
+                <div class="dashboard-card">
+                    <h3>Средняя стоимость доставки</h3>
+                    <div class="number" id="analytics-avg-cost">0₽</div>
+                </div>
+            </div>
+            <h3 style="margin: 30px 0 20px 0;">Производительность водителей</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Водитель</th>
+                        <th>Доставок</th>
+                    </tr>
+                </thead>
+                <tbody id="driver-performance">
+                    <tr><td colspan="2" class="loading">Загрузка...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="orderModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">Новый заказ</div>
+            <div class="modal-body">
+                <div class="form-group"><label>Номер заказа:</label><input type="text" id="orderNumber" placeholder="ORD-2024-00001"></div>
+                <div class="form-group"><label>Клиент ID:</label><input type="number" id="orderCustomerId" min="1"></div>
+                <div class="form-group"><label>Склад ID:</label><input type="number" id="orderWarehouseId" min="1"></div>
+                <div class="form-group"><label>Дата заказа:</label><input type="date" id="orderDate"></div>
+                <div class="form-group"><label>Дата доставки:</label><input type="date" id="deliveryDate"></div>
+                <div class="form-group"><label>Стоимость:</label><input type="number" id="orderCost" step="0.01" min="0"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeOrderModal()">Отмена</button>
+                <button class="btn btn-primary" onclick="createOrder()">Создать</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="deliveryModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">Новая доставка</div>
+            <div class="modal-body">
+                <div class="form-group"><label>Номер доставки:</label><input type="text" id="deliveryNumber" placeholder="DEL-2024-00001"></div>
+                <div class="form-group"><label>Заказ ID:</label><input type="number" id="deliveryOrderId" min="1"></div>
+                <div class="form-group"><label>Водитель ID:</label><input type="number" id="deliveryDriverId" min="1"></div>
+                <div class="form-group"><label>Транспорт ID:</label><input type="number" id="deliveryVehicleId" min="1"></div>
+                <div class="form-group"><label>Маршрут ID:</label><input type="number" id="deliveryRouteId" min="1"></div>
+                <div class="form-group"><label>ФИО получателя:</label><input type="text" id="recipientName"></div>
+                <div class="form-group"><label>Телефон получателя:</label><input type="tel" id="recipientPhone"></div>
+                <div class="form-group"><label>Адрес доставки:</label><input type="text" id="recipientAddress"></div>
+                <div class="form-group"><label>Стоимость доставки:</label><input type="number" id="deliveryCost" step="0.01" min="0"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeDeliveryModal()">Отмена</button>
+                <button class="btn btn-primary" onclick="createDelivery()">Создать</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="routeModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">Новый маршрут</div>
+            <div class="modal-body">
+                <div class="form-group"><label>Название:</label><input type="text" id="routeName"></div>
+                <div class="form-group"><label>Откуда:</label><input type="text" id="routeStart"></div>
+                <div class="form-group"><label>Куда:</label><input type="text" id="routeEnd"></div>
+                <div class="form-group"><label>Расстояние, км:</label><input type="number" id="routeDistance" step="0.01" min="0"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeRouteModal()">Отмена</button>
+                <button class="btn btn-primary" onclick="createRoute()">Создать</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="customerModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">Новый клиент</div>
+            <div class="modal-body">
+                <div class="form-group"><label>Компания:</label><input type="text" id="customerCompany"></div>
+                <div class="form-group"><label>Контактное лицо:</label><input type="text" id="customerContact"></div>
+                <div class="form-group"><label>Телефон:</label><input type="tel" id="customerPhone"></div>
+                <div class="form-group"><label>Город:</label><input type="text" id="customerCity"></div>
+                <div class="form-group"><label>Адрес:</label><input type="text" id="customerAddress"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeCustomerModal()">Отмена</button>
+                <button class="btn btn-primary" onclick="createCustomer()">Создать</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="vehicleModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">Новое транспортное средство</div>
+            <div class="modal-body">
+                <div class="form-group"><label>Номер:</label><input type="text" id="vehiclePlate"></div>
+                <div class="form-group"><label>Тип:</label><input type="text" id="vehicleType"></div>
+                <div class="form-group"><label>Марка:</label><input type="text" id="vehicleBrand"></div>
+                <div class="form-group"><label>Модель:</label><input type="text" id="vehicleModel"></div>
+                <div class="form-group"><label>Грузоподъемность (кг):</label><input type="number" id="vehicleCapacity" step="0.01" min="0"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeVehicleModal()">Отмена</button>
+                <button class="btn btn-primary" onclick="createVehicle()">Создать</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:8000/api';
+
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+            loadTabData(tabName);
+        }
+
+        function loadTabData(tabName) {
+            if (tabName === 'dashboard') loadDashboard();
+            else if (tabName === 'orders') loadOrders();
+            else if (tabName === 'deliveries') loadDeliveries();
+            else if (tabName === 'routes') loadRoutes();
+            else if (tabName === 'customers') loadCustomers();
+            else if (tabName === 'drivers') loadDrivers();
+            else if (tabName === 'vehicles') loadVehicles();
+            else if (tabName === 'analytics') loadAnalytics();
+        }
+        async function loadOrders() {
+            try {
+                const data = await fetch(`${API_URL}/orders`).then(r => r.json());
+                const tbody = document.getElementById('orders-table');
+                tbody.innerHTML = data.data.map(o => `
+                    <tr>
+                        <td><strong>${o.order_number}</strong></td>
+                        <td>ID: ${o.customer_id}</td>
+                        <td><span class="status-badge">${o.status}</span></td>
+                        <td>${o.delivery_date}</td>
+                        <td>${o.cost}₽</td>
+                    </tr>
+                `).join('');
+            } catch (e) {
+                showMessage('Ошибка загрузки заказов', 'error');
+            }
+        }
+
+        async function loadDashboard() {
+            try {
+                const dashboard = await fetch(`${API_URL}/analytics/dashboard`).then(r => r.json());
+                document.getElementById('total-orders').textContent = dashboard.total_orders;
+                document.getElementById('delivered-orders').textContent = dashboard.delivered_orders;
+                document.getElementById('in-transit-orders').textContent = dashboard.in_transit_orders;
+                document.getElementById('available-drivers').textContent = dashboard.available_drivers;
+                document.getElementById('total-revenue').textContent = dashboard.total_revenue.toLocaleString() + '₽';
+                document.getElementById('total-deliveries').textContent = dashboard.total_deliveries;
+
+                const orders = await fetch(`${API_URL}/orders?limit=5`).then(r => r.json());
+                const tbody = document.getElementById('recent-orders');
+                tbody.innerHTML = orders.data.slice(0, 5).map(o => `
+                    <tr>
+                        <td><strong>${o.order_number}</strong></td>
+                        <td>${o.customer_id}</td>
+                        <td><span class="status-badge status-${o.status.toLowerCase()}">${o.status}</span></td>
+                        <td>${o.delivery_date}</td>
+                        <td>${o.cost}₽</td>
+                    </tr>
+                `).join('');
+            } catch (e) {
+                showMessage('Ошибка загрузки дашборда', 'error');
+            }
+        }
+
+        async function loadOrders() {
+            try {
+                const data = await fetch(`${API_URL}/orders`).then(r => r.json());
+                const tbody = document.getElementById('orders-table');
+                tbody.innerHTML = data.data.map(o => `
+                    <tr>
+                        <td><strong>${o.order_number}</strong></td>
+                        <td>ID: ${o.customer_id}</td>
+                        <td><span class="status-badge status-${o.status.toLowerCase()}">${o.status}</span></td>
+                        <td>${o.delivery_date}</td>
+                        <td>${o.cost}₽</td>
+                        <td><button class="btn btn-primary" onclick="updateOrderStatus(${o.order_id}, 'Delivered')">✓</button></td>
+                    </tr>
+                `).join('');
+            } catch (e) {
+                showMessage('Ошибка загрузки заказов', 'error');
+            }
+        }
+
+        async function loadDeliveries() {
+            try {
+                const data = await fetch(`${API_URL}/deliveries`).then(r => r.json());
+                const tbody = document.getElementById('deliveries-table');
+                tbody.innerHTML = data.data.map(d => `
+                    <tr>
+                        <td><strong>${d.delivery_number}</strong></td>
+                        <td>ID: ${d.order_id}</td>
+                        <td>ID: ${d.driver_id}</td>
+                        <td><span class="status-badge status-${d.status.toLowerCase()}">${d.status}</span></td>
+                        <td>${d.departure_time ? new Date(d.departure_time).toLocaleString('ru-RU') : '-'}</td>
+                        <td>${d.delivery_time ? new Date(d.delivery_time).toLocaleString('ru-RU') : '-'}</td>
+                        <td><button class="btn btn-success" onclick="updateDeliveryStatus(${d.delivery_id}, 'Delivered')">Завершить</button></td>
+                    </tr>
+                `).join('');
+            } catch (e) {
+                showMessage('Ошибка загрузки доставок', 'error');
+            }
+        }
+
+        async function loadRoutes() {
+            try {
+                const data = await fetch(`${API_URL}/routes`).then(r => r.json());
+                const tbody = document.getElementById('routes-table');
+                tbody.innerHTML = data.data.map(r => `
+                    <tr>
+                        <td>${r.route_id}</td>
+                        <td><strong>${r.route_name}</strong></td>
+                        <td>${r.start_location}</td>
+                        <td>${r.end_location}</td>
+                        <td>${r.distance_km} км</td>
+                        <td><span class="status-badge status-delivered">${r.is_active ? 'Активен' : 'Неактивен'}</span></td>
+                        <td><button class="btn btn-secondary" onclick="deleteRoute(${r.route_id})">Деактивировать</button></td>
+                    </tr>
+                `).join('');
+            } catch (e) {
+                showMessage('Ошибка загрузки маршрутов', 'error');
+            }
+        }
+
+        async function loadCustomers() {
+            try {
+                const data = await fetch(`${API_URL}/customers`).then(r => r.json());
+                const tbody = document.getElementById('customers-table');
+                tbody.innerHTML = data.data.map(c => `
+                    <tr>
+                        <td><strong>${c.company_name}</strong></td>
+                        <td>${c.contact_person}</td>
+                        <td>${c.city}</td>
+                        <td>${c.phone}</td>
+                        <td><span class="status-badge ${c.is_active ? 'status-delivered' : 'status-failed'}">${c.is_active ? 'Активен' : 'Неактивен'}</span></td>
+                        <td><button class="btn btn-secondary">Редакт.</button></td>
+                    </tr>
+                `).join('');
+            } catch (e) {
+                showMessage('Ошибка загрузки клиентов', 'error');
+            }
+        }
+
+        async function loadDrivers() {
+            try {
+                const data = await fetch(`${API_URL}/drivers`).then(r => r.json());
+                const tbody = document.getElementById('drivers-table');
+                tbody.innerHTML = data.data.map(d => `
+                    <tr>
+                        <td>${d.driver_id}</td>
+                        <td>ID сотр.: ${d.employee_id}</td>
+                        <td>${d.license_number}</td>
+                        <td>${d.experience_years} лет</td>
+                        <td><span class="status-badge ${d.is_available ? 'status-delivered' : 'status-pending'}">${d.is_available ? 'Да' : 'Нет'}</span></td>
+                        <td><button class="btn btn-primary" onclick="toggleDriverAvailability(${d.driver_id}, ${!d.is_available})">Изменить</button></td>
+                    </tr>
+                `).join('');
+            } catch (e) {
+                showMessage('Ошибка загрузки водителей', 'error');
+            }
+        }
+
+        async function loadVehicles() {
+            try {
+                const data = await fetch(`${API_URL}/vehicles`).then(r => r.json());
+                const tbody = document.getElementById('vehicles-table');
+                tbody.innerHTML = data.data.map(v => `
+                    <tr>
+                        <td><strong>${v.license_plate}</strong></td>
+                        <td>${v.vehicle_type}</td>
+                        <td>${v.brand} ${v.model}</td>
+                        <td>${v.capacity_kg} кг</td>
+                        <td><span class="status-badge ${v.is_available ? 'status-delivered' : 'status-pending'}">${v.is_available ? 'Да' : 'Нет'}</span></td>
+                        <td><button class="btn btn-secondary">Редакт.</button></td>
+                    </tr>
+                `).join('');
+            } catch (e) {
+                showMessage('Ошибка загрузки транспорта', 'error');
+            }
+        }
+
+        async function loadAnalytics() {
+            try {
+                const dashboard = await fetch(`${API_URL}/analytics/dashboard`).then(r => r.json());
+                document.getElementById('analytics-revenue').textContent = dashboard.total_revenue.toLocaleString() + '₽';
+                document.getElementById('analytics-deliveries').textContent = dashboard.total_deliveries;
+                document.getElementById('analytics-avg-cost').textContent = dashboard.avg_delivery_cost.toFixed(2) + '₽';
+
+                const performance = await fetch(`${API_URL}/analytics/driver-performance`).then(r => r.json());
+                const tbody = document.getElementById('driver-performance');
+                tbody.innerHTML = performance.data.map(d => `
+                    <tr>
+                        <td>${d.name}</td>
+                        <td>${d.deliveries}</td>
+                    </tr>
+                `).join('');
+            } catch (e) {
+                showMessage('Ошибка загрузки аналитики', 'error');
+            }
+        }
+
+        async function createOrder() {
+            const data = {
+                order_number: document.getElementById('orderNumber').value,
+                customer_id: parseInt(document.getElementById('orderCustomerId').value),
+                warehouse_id: parseInt(document.getElementById('orderWarehouseId').value),
+                order_date: document.getElementById('orderDate').value,
+                delivery_date: document.getElementById('deliveryDate').value,
+                status: 'Pending',
+                cost: parseFloat(document.getElementById('orderCost').value)
+            };
+            try {
+                await fetch(`${API_URL}/orders`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+                closeOrderModal();
+                loadOrders();
+                showMessage('Заказ создан успешно', 'success');
+            } catch (e) {
+                showMessage('Ошибка создания заказа', 'error');
+            }
+        }
+
+        async function createDelivery() {
+            const data = {
+                delivery_number: document.getElementById('deliveryNumber').value,
+                order_id: parseInt(document.getElementById('deliveryOrderId').value),
+                driver_id: parseInt(document.getElementById('deliveryDriverId').value),
+                vehicle_id: parseInt(document.getElementById('deliveryVehicleId').value),
+                route_id: parseInt(document.getElementById('deliveryRouteId').value),
+                recipient_name: document.getElementById('recipientName').value,
+                recipient_phone: document.getElementById('recipientPhone').value,
+                recipient_address: document.getElementById('recipientAddress').value,
+                status: 'Pending',
+                delivery_cost: parseFloat(document.getElementById('deliveryCost').value)
+            };
+            try {
+                await fetch(`${API_URL}/deliveries`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+                closeDeliveryModal();
+                loadDeliveries();
+                showMessage('Доставка создана успешно', 'success');
+            } catch (e) {
+                showMessage('Ошибка создания доставки', 'error');
+            }
+        }
+
+        async function createRoute() {
+            const data = {
+                route_name: document.getElementById('routeName').value,
+                start_location: document.getElementById('routeStart').value,
+                end_location: document.getElementById('routeEnd').value,
+                distance_km: parseFloat(document.getElementById('routeDistance').value),
+                is_active: true
+            };
+            try {
+                await fetch(`${API_URL}/routes`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+                closeRouteModal();
+                loadRoutes();
+                showMessage('Маршрут создан успешно', 'success');
+            } catch (e) {
+                showMessage('Ошибка создания маршрута', 'error');
+            }
+        }
+
+        async function createCustomer() {
+            const data = {
+                company_name: document.getElementById('customerCompany').value,
+                contact_person: document.getElementById('customerContact').value,
+                phone: document.getElementById('customerPhone').value,
+                city: document.getElementById('customerCity').value,
+                address: document.getElementById('customerAddress').value,
+                is_active: true
+            };
+            try {
+                await fetch(`${API_URL}/customers`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+                closeCustomerModal();
+                loadCustomers();
+                showMessage('Клиент создан успешно', 'success');
+            } catch (e) {
+                showMessage('Ошибка создания клиента', 'error');
+            }
+        }
+
+        async function createVehicle() {
+            const data = {
+                license_plate: document.getElementById('vehiclePlate').value,
+                vehicle_type: document.getElementById('vehicleType').value,
+                brand: document.getElementById('vehicleBrand').value,
+                model: document.getElementById('vehicleModel').value,
+                capacity_kg: parseFloat(document.getElementById('vehicleCapacity').value),
+                is_available: true
+            };
+            try {
+                await fetch(`${API_URL}/vehicles`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+                closeVehicleModal();
+                loadVehicles();
+                showMessage('ТС создано успешно', 'success');
+            } catch (e) {
+                showMessage('Ошибка создания ТС', 'error');
+            }
+        }
+
+        async function updateOrderStatus(orderId, status) {
+            try {
+                await fetch(`${API_URL}/orders/${orderId}/status?status=${status}`, { method: 'PUT' });
+                loadOrders();
+                showMessage('Статус заказа обновлен', 'success');
+            } catch (e) {
+                showMessage('Ошибка обновления статуса', 'error');
+            }
+        }
+
+        async function updateDeliveryStatus(deliveryId, status) {
+            try {
+                await fetch(`${API_URL}/deliveries/${deliveryId}/status?status=${status}`, { method: 'PUT' });
+                loadDeliveries();
+                showMessage('Статус доставки обновлен', 'success');
+            } catch (e) {
+                showMessage('Ошибка обновления статуса', 'error');
+            }
+        }
+
+        async function deleteRoute(routeId) {
+            if (confirm('Вы уверены?')) {
+                try {
+                    await fetch(`${API_URL}/routes/${routeId}`, { method: 'DELETE' });
+                    loadRoutes();
+                    showMessage('Маршрут деактивирован', 'success');
+                } catch (e) {
+                    showMessage('Ошибка деактивации', 'error');
+                }
+            }
+        }
+
+        async function toggleDriverAvailability(driverId, available) {
+            try {
+                await fetch(`${API_URL}/drivers/${driverId}/availability?is_available=${available}`, { method: 'PUT' });
+                loadDrivers();
+                showMessage('Доступность водителя изменена', 'success');
+            } catch (e) {
+                showMessage('Ошибка изменения доступности', 'error');
+            }
+        }
+
+        function openOrderModal() { document.getElementById('orderModal').classList.add('show'); }
+        function closeOrderModal() { document.getElementById('orderModal').classList.remove('show'); }
+        function openDeliveryModal() { document.getElementById('deliveryModal').classList.add('show'); }
+        function closeDeliveryModal() { document.getElementById('deliveryModal').classList.remove('show'); }
+        function openRouteModal() { document.getElementById('routeModal').classList.add('show'); }
+        function closeRouteModal() { document.getElementById('routeModal').classList.remove('show'); }
+        function openCustomerModal() { document.getElementById('customerModal').classList.add('show'); }
+        function closeCustomerModal() { document.getElementById('customerModal').classList.remove('show'); }
+        function openVehicleModal() { document.getElementById('vehicleModal').classList.add('show'); }
+        function closeVehicleModal() { document.getElementById('vehicleModal').classList.remove('show'); }
+
+        function showMessage(text, type) {
+            const container = document.getElementById('message-container');
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type}`;
+            alert.textContent = text;
+            container.appendChild(alert);
+            setTimeout(() => alert.remove(), 3000);
+        }
+
+        window.onload = () => loadDashboard();
+    </script>
+</body>
+</html>
